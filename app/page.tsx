@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import QRCode from "qrcode";
+import { withRuntime } from "@/lib/runtime";
 
 type Mode = "chat" | "search" | "image" | "build";
 type Source = { title: string; url: string };
@@ -28,6 +29,131 @@ const MODES: { id: Mode; label: string; hint: string; placeholder: string }[] = 
   { id: "image", label: "Image", hint: "Make or edit pictures", placeholder: "Describe the picture: subject, style, background, lighting, angle…" },
   { id: "build", label: "Build", hint: "Websites, surveys, slide decks", placeholder: "Describe what to build (website, survey or slides) and give it your facts, prices and pictures…" },
 ];
+
+// One-click starters for Build mode. Students swap the [brackets] for their own details.
+const STARTERS: { title: string; blurb: string; prompt: string }[] = [
+  { title: "Landing page", blurb: "A full startup website", prompt: "Build a landing page for my product [name]. It is [what it does] for [who it's for]. The price is [price]. Use my picture." },
+  { title: "Survey", blurb: "Ask people, see live results", prompt: "Build a survey for [my product] to find out if people want it. Ask: 1) [question] 2) [question] 3) [question]. Show live results." },
+  { title: "Pitch deck", blurb: "Slides for your big pitch", prompt: "Build a pitch deck for [my product]. Problem: [problem]. Solution: [solution]. Price: [price]. Evidence: [my survey results]." },
+  { title: "Quiz", blurb: "With a live leaderboard", prompt: "Build a 5-question quiz about [topic] with a live leaderboard. Questions and answers: [list them]." },
+  { title: "Live poll", blurb: "Everyone votes, bars move", prompt: "Build a live poll: \"[question]?\" with options [A], [B], [C]. Show the results updating live." },
+  { title: "Waitlist", blurb: "Count your first fans", prompt: "Build a waitlist page for [my product] with a big live counter of how many people have joined." },
+  { title: "Order form", blurb: "Menu, prices, running total", prompt: "Build an order page for [my business]. Items and prices: [item - price], [item - price]. Show a running total and save orders." },
+  { title: "Launch countdown", blurb: "Ticking clock to launch day", prompt: "Build a launch countdown page for [my product], launching on [date]. Add a 'notify me' sign-up." },
+  { title: "Mini game", blurb: "A playable game", prompt: "Build a simple game where [how it works], themed around [my product]. Keep score and add a live high-score board." },
+  { title: "Brand board", blurb: "Logo, colours, fonts", prompt: "Build a brand board for [my company]: wordmark logo, colour palette, fonts, tagline ideas and example social posts. Our vibe is [3 words]." },
+];
+
+type Answer = { id: string; form: string; data: Record<string, string>; source: string; at: number };
+
+function csv(rows: Answer[]) {
+  const keys = Array.from(new Set(rows.flatMap((r) => Object.keys(r.data))));
+  const cell = (v: string) => `"${String(v ?? "").replace(/"/g, '""')}"`;
+  const lines = [["time", "form", "from", ...keys].map(cell).join(",")];
+  for (const r of rows) lines.push([new Date(r.at).toLocaleString(), r.form, r.source, ...keys.map((k) => r.data[k] ?? "")].map(cell).join(","));
+  return lines.join("\n");
+}
+
+// Live answers from the surveys and forms on this chat's pages (preview tests and the shared link).
+function Responses({ project, code }: { project: string; code: string }) {
+  const [answers, setAnswers] = useState<Answer[] | null>(null);
+  const [error, setError] = useState("");
+
+  async function refresh() {
+    try {
+      const r = await fetch(`/api/responses/${project}`, { headers: { "x-lab-code": code } });
+      const d = await r.json();
+      if (d.answers) {
+        setAnswers(d.answers);
+        setError("");
+      } else setError(d.error || "Couldn't load answers");
+    } catch {
+      setError("Couldn't load answers. Check the wifi.");
+    }
+  }
+
+  useEffect(() => {
+    setAnswers(null);
+    refresh();
+    const t = setInterval(refresh, 4000);
+    return () => clearInterval(t);
+  }, [project]);
+
+  async function clear() {
+    if (!confirm("Delete every answer for this project? This can't be undone.")) return;
+    await fetch(`/api/responses/${project}`, { method: "DELETE", headers: { "x-lab-code": code } });
+    refresh();
+  }
+
+  function download() {
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(new Blob([csv(answers || [])], { type: "text/csv" }));
+    a.download = "answers.csv";
+    a.click();
+  }
+
+  if (!answers) return <div className="responses"><p className="muted">{error || "Loading answers…"}</p></div>;
+
+  const forms = Array.from(new Set(answers.map((a) => a.form)));
+  const live = answers.filter((a) => a.source === "live").length;
+
+  return (
+    <div className="responses">
+      <div className="resp-head">
+        <div>
+          <h3>{answers.length} {answers.length === 1 ? "answer" : "answers"}</h3>
+          <p className="muted">{live} from the shared link, {answers.length - live} from testing here. Updates live.</p>
+        </div>
+        <div className="row">
+          <button className="btn small" onClick={download} disabled={!answers.length}>Download CSV</button>
+          <button className="btn small" onClick={clear} disabled={!answers.length}>Clear all</button>
+        </div>
+      </div>
+      {error && <div className="share-error">{error}</div>}
+      {!answers.length && (
+        <div className="resp-empty">
+          <b>No answers yet</b>
+          <p className="muted">Try your survey or form in the preview, or press Share and let people answer on their phones. Answers show up here straight away.</p>
+        </div>
+      )}
+      {forms.map((form) => {
+        const rows = answers.filter((a) => a.form === form);
+        const questions = Array.from(new Set(rows.flatMap((r) => Object.keys(r.data))));
+        return (
+          <div key={form} className="resp-form">
+            {forms.length > 1 && <div className="tag">{form} · {rows.length}</div>}
+            {questions.map((q) => {
+              const counts: Record<string, number> = {};
+              for (const r of rows) {
+                const v = r.data[q] || "";
+                if (v.trim()) counts[v] = (counts[v] || 0) + 1;
+              }
+              const entries = Object.entries(counts).sort((a, b) => b[1] - a[1]);
+              const total = entries.reduce((n, [, c]) => n + c, 0);
+              const isText = entries.length > 8 && entries.every(([, c]) => c === 1);
+              return (
+                <div key={q} className="resp-q">
+                  <div className="resp-title">{q}</div>
+                  {isText ? (
+                    <ul className="resp-text">{entries.slice(0, 30).map(([v]) => <li key={v}>{v}</li>)}</ul>
+                  ) : (
+                    entries.slice(0, 12).map(([v, c]) => (
+                      <div key={v} className="bar">
+                        <div className="bar-fill" style={{ width: `${(c / total) * 100}%` }} />
+                        <span className="bar-label">{v}</span>
+                        <span className="bar-num">{c} · {Math.round((c / total) * 100)}%</span>
+                      </div>
+                    ))
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
 
 function load<T>(key: string, fallback: T): T {
   try {
@@ -83,6 +209,7 @@ export default function Lab() {
   const [sharing, setSharing] = useState(false);
   const [notice, setNotice] = useState("");
   const [openXray, setOpenXray] = useState<number | null>(null);
+  const [panel, setPanel] = useState<"page" | "responses">("page");
   const bottomRef = useRef<HTMLDivElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const stageRef = useRef<HTMLDivElement>(null);
@@ -117,6 +244,11 @@ export default function Lab() {
   const shownHtml = shownIdx != null ? messages[shownIdx]?.html ?? null : null;
   const versionNumber = htmlVersions.findIndex((x) => x.i === shownIdx) + 1;
   const showPreview = !!shownHtml && previewOpen;
+  // The page as it really runs: links scroll, and forms and surveys save answers for this chat.
+  const previewDoc = useMemo(
+    () => (shownHtml && chat ? withRuntime(shownHtml, { project: chat.id, api: location.origin, source: "preview" }) : ""),
+    [shownHtml, chat?.id]
+  );
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -126,6 +258,7 @@ export default function Lab() {
     setPreviewIdx(null);
     setOpenXray(null);
     setPreviewOpen(true);
+    setPanel("page");
   }, [currentId]);
 
   useEffect(() => {
@@ -232,7 +365,7 @@ export default function Lab() {
       const r = await fetch("/api/share", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ code, html: shownHtml }),
+        body: JSON.stringify({ code, html: shownHtml, project: chat?.id }),
       });
       const d = await r.json().catch(() => ({}));
       if (d.url) setShare({ url: d.url, qr: await QRCode.toDataURL(d.url, { width: 360, margin: 1 }) });
@@ -321,6 +454,15 @@ export default function Lab() {
                 <div><b>EXAMPLE</b><span>of what good looks like</span></div>
               </div>
               <p className="muted">Pick a tool below. Attach pictures you've saved with the + button, or paste them in.</p>
+              <h3 className="starters-title">Or start a build in one click</h3>
+              <div className="starters">
+                {STARTERS.map((st) => (
+                  <button key={st.title} className="starter" disabled={demo} onClick={() => { setMode("build"); setInput(st.prompt); }}>
+                    <b>{st.title}</b>
+                    <span>{st.blurb}</span>
+                  </button>
+                ))}
+              </div>
             </div>
           )}
           {messages.map((m, i) => (
@@ -460,8 +602,9 @@ export default function Lab() {
               <button className="icon-btn" disabled={versionNumber >= htmlVersions.length} onClick={() => setPreviewIdx(htmlVersions[versionNumber].i)}>›</button>
             </div>
             <div className="seg toggle">
-              <button className={device === "desktop" ? "on" : ""} onClick={() => setDevice("desktop")}>Desktop</button>
-              <button className={device === "mobile" ? "on" : ""} onClick={() => setDevice("mobile")}>Phone</button>
+              <button className={panel === "page" && device === "desktop" ? "on" : ""} onClick={() => { setPanel("page"); setDevice("desktop"); }}>Desktop</button>
+              <button className={panel === "page" && device === "mobile" ? "on" : ""} onClick={() => { setPanel("page"); setDevice("mobile"); }}>Phone</button>
+              <button className={panel === "responses" ? "on" : ""} onClick={() => setPanel("responses")}>Responses</button>
             </div>
             <div className="seg">
               <button className="btn small" onClick={() => setFullscreen((f) => !f)}>{fullscreen ? "Exit full screen" : "Full screen"}</button>
@@ -470,17 +613,18 @@ export default function Lab() {
             </div>
           </div>
           {shareError && <div className="share-error">{shareError}</div>}
-          <div className={`stage ${device}`} ref={stageRef}>
+          {panel === "responses" && chat && <Responses project={chat.id} code={code} />}
+          <div className={`stage ${device}`} ref={stageRef} hidden={panel === "responses"}>
             {device === "desktop" ? (
               <iframe
                 key={shownIdx ?? -1}
                 title="Preview"
-                srcDoc={shownHtml!}
-                sandbox="allow-scripts allow-forms allow-modals allow-popups"
+                srcDoc={previewDoc}
+                sandbox="allow-scripts allow-forms allow-modals allow-popups allow-popups-to-escape-sandbox"
                 style={{ width: scale < 1 ? 1280 : "100%", height: scale < 1 ? stage.h / scale : "100%", transform: `scale(${scale})` }}
               />
             ) : (
-              <iframe key={shownIdx ?? -1} title="Preview" srcDoc={shownHtml!} sandbox="allow-scripts allow-forms allow-modals allow-popups" className="phone" />
+              <iframe key={shownIdx ?? -1} title="Preview" srcDoc={previewDoc} sandbox="allow-scripts allow-forms allow-modals allow-popups allow-popups-to-escape-sandbox" className="phone" />
             )}
           </div>
         </section>

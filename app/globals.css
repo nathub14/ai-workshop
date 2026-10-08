@@ -183,3 +183,31 @@ h1, h2, h3 { font-family: "Space Grotesk", "Inter", sans-serif; margin: 0; lette
   .preview { height: 85vh; }
   .framework { grid-template-columns: repeat(2, 1fr); }
 }
+
+/* Build starters */
+.empty .starters-title { margin: 28px 0 0; font-size: 15px; }
+.starters { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 8px; margin-top: 10px; text-align: left; }
+.starter { display: flex; flex-direction: column; gap: 2px; padding: 12px 14px; background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); text-align: left; transition: border-color 120ms, transform 120ms, box-shadow 120ms; }
+.starter:hover:not(:disabled) { border-color: var(--accent); transform: translateY(-1px); box-shadow: 0 4px 14px rgba(0,0,0,0.06); }
+.starter b { font-size: 14px; }
+.starter span { font-size: 12px; color: var(--muted); }
+
+/* Responses panel */
+.stage[hidden] { display: none; }
+.responses { flex: 1; min-height: 0; overflow: auto; padding: 20px; background: var(--bg); display: flex; flex-direction: column; gap: 14px; }
+.resp-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; flex-wrap: wrap; }
+.resp-head h3 { font-size: 22px; }
+.resp-head p { margin: 4px 0 0; font-size: 13px; }
+.resp-head .row { display: flex; gap: 6px; }
+.resp-empty { background: var(--panel); border: 1px dashed var(--line); border-radius: 12px; padding: 24px; text-align: center; }
+.resp-empty p { margin: 6px 0 0; font-size: 13px; }
+.resp-form { display: flex; flex-direction: column; gap: 10px; }
+.resp-form .tag { align-self: flex-start; }
+.resp-q { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; display: flex; flex-direction: column; gap: 6px; }
+.resp-title { font-weight: 700; margin-bottom: 4px; }
+.bar { position: relative; display: flex; justify-content: space-between; gap: 10px; padding: 8px 10px; border-radius: 8px; background: #f3f2ee; overflow: hidden; font-size: 13px; }
+.bar-fill { position: absolute; inset: 0 auto 0 0; background: var(--accent-soft); border-right: 3px solid var(--accent); transition: width 400ms ease; }
+.bar-label, .bar-num { position: relative; }
+.bar-label { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bar-num { color: var(--ink-2); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.resp-text { margin: 0; padding-left: 18px; font-size: 13px; display: flex; flex-direction: column; gap: 4px; }

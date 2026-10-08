@@ -7,6 +7,8 @@ A light wrapper around the OpenAI API for the kids' AI workshop. One chat screen
 - **Image**: make and edit pictures; students download the ones they like (Mission 3)
 - **Build**: a full landing page, survey or slide deck, shown live on the right (desktop or phone view) with version history, full screen and **Share** (link + QR). Use it for Missions 4, 5, 7
 
+Build mode also does quizzes, live polls, waitlists, order forms, launch countdowns, mini games and brand boards; the empty chat shows one-click starters for each. Surveys and forms on built pages **really save answers** from everyone who opens the shared link. The **Responses** tab next to the preview shows them live as bar charts, with a CSV download. Pages show live results and counters too, but the public counts leave out names, emails and other personal fields.
+
 Students attach saved pictures with the **+** button (or paste them). The AI sees them and puts them in the pages it builds. The build prompt never invents facts, prices or stats: anything the student hasn't given shows up as a highlighted placeholder, and the AI asks for it. Every reply has an **X-ray** link showing exactly what was sent to the AI (hidden instructions + whole conversation). Use it for the "real request" part of the lesson.
 
 Kids' chats are saved in their own browser, so a refresh loses nothing. Nobody signs up; they type one access code.

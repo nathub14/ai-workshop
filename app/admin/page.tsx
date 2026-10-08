@@ -10,7 +10,7 @@ type Status = {
 
 const FIELDS: { key: keyof Cfg; label: string; help: string; rows: number }[] = [
   { key: "chatPrompt", label: "Front prompt", help: "Hidden instructions put in front of everything the students send.", rows: 8 },
-  { key: "builderPrompt", label: "Build prompt", help: "Added in Build mode. Must tell the AI to reply with one HTML file in a code block.", rows: 22 },
+  { key: "builderPrompt", label: "Build prompt", help: "Added in Build mode. Must tell the AI to reply with one HTML file in a code block. Technical rules (saving survey answers, safety) are added automatically after this.", rows: 22 },
   { key: "demoPrompt", label: "Professor Know-It-All", help: "Used only when the app is opened with ?demo=1 at the end of the link.", rows: 5 },
 ];
 

@@ -1,4 +1,4 @@
-import { put, get } from "@vercel/blob";
+import { put, get, list, del } from "@vercel/blob";
 import { promises as fs } from "fs";
 import path from "path";
 
@@ -12,7 +12,7 @@ let access: Access = process.env.BLOB_ACCESS === "public" ? "public" : "private"
 const other = (a: Access): Access => (a === "public" ? "private" : "public");
 
 function safe(p: string) {
-  if (!/^[a-z]+\/[A-Za-z0-9_-]+\.[a-z]+$/.test(p)) throw new Error("bad path");
+  if (!/^[a-z]+\/([a-z0-9]{4,20}\/)?[A-Za-z0-9_-]+\.[a-z]+$/.test(p)) throw new Error("bad path");
   return p;
 }
 
@@ -77,6 +77,32 @@ export async function loadFile(p: string): Promise<Buffer | null> {
   } catch {
     return null;
   }
+}
+
+// Paths of every file in one folder, e.g. listFiles("responses/abc123") -> ["responses/abc123/x.json", ...]
+export async function listFiles(dir: string): Promise<string[]> {
+  if (!/^[a-z]+\/[a-z0-9]{4,20}$/.test(dir)) throw new Error("bad path");
+  if (useBlob) {
+    const out: string[] = [];
+    let cursor: string | undefined;
+    do {
+      const res = await list({ prefix: dir + "/", cursor, limit: 1000 });
+      out.push(...res.blobs.map((b) => b.pathname));
+      cursor = res.hasMore ? res.cursor : undefined;
+    } while (cursor);
+    return out;
+  }
+  try {
+    return (await fs.readdir(path.join(localRoot, dir))).map((f) => `${dir}/${f}`);
+  } catch {
+    return [];
+  }
+}
+
+export async function deleteFile(p: string) {
+  safe(p);
+  if (useBlob) return void (await del(p));
+  await fs.rm(path.join(localRoot, p), { force: true });
 }
 
 export async function storageCheck(): Promise<{ ok: boolean; mode: string; message: string }> {

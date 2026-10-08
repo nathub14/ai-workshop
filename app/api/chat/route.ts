@@ -16,6 +16,18 @@ const MAX_USER_CHARS = 6000;
 const MAX_VISION_IMAGES = 3;
 const MIME: Record<string, string> = { png: "image/png", jpg: "image/jpeg", webp: "image/webp" };
 
+// Kept out of the editable build prompt so the pages always work with the Lab's saving (lib/runtime.ts).
+const BUILD_TECH = `TECHNICAL RULES (always follow):
+- All CSS and JavaScript inline. No external scripts or libraries; the only external file allowed is one Google Fonts <link>.
+- Saving answers: the page has a built-in object window.Lab that stores answers from everyone who opens the page (classmates on their phones).
+  - await Lab.submit("form-name", { question: "answer", ... }) saves one person's answers. Use the question text, or a short label, as each key and the chosen option text as the value. Use it for every survey, poll, quiz score, sign-up, pre-order and order form.
+  - await Lab.results("form-name") returns { total: 12, fields: { "question": { "answer": 7, "other answer": 5 } } }: counts from everyone so far.
+  - Lab.onResults("form-name", callback) calls callback(results) now and every few seconds, so results and counters update live. Use it for live results, leaderboards (key "score" or "nickname: score") and sign-up counters. Build the results layout once, then on each update only change the numbers and bar widths (with a CSS width transition); never rebuild it or replay entrance animations, or the screen flickers every few seconds.
+  - For a <form>, handle submit yourself: e.preventDefault(), collect the fields, await Lab.submit(...), then show a designed thank-you state in the page.
+  - Lab.toast("message") shows a small confirmation bubble.
+- Never ask for email addresses, phone numbers, full names, addresses, schools or ages: the respondents are children. For sign-ups use an optional first name or nickname and questions like "Would you buy this?" or "Which colour?".
+- Never use localStorage, cookies, alert(), or links to other pages.`;
+
 function splitBuild(text: string): { html: string | null; note: string } {
   const fenced = text.match(/```(?:html)?\s*([\s\S]*?)```/i);
   const body = fenced ? fenced[1] : text;
@@ -101,7 +113,7 @@ export async function POST(req: Request) {
   const cfg = await getConfig();
   let instructions = cfg.chatPrompt;
   if (demo) instructions += `\n\n${cfg.demoPrompt}`;
-  else if (mode === "build") instructions += `\n\n${cfg.builderPrompt}`;
+  else if (mode === "build") instructions += `\n\n${cfg.builderPrompt}\n\n${BUILD_TECH}`;
 
   const tools: any[] = [];
   if (!demo && mode === "search") tools.push({ type: "web_search" });
