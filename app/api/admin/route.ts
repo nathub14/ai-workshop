@@ -27,6 +27,7 @@ export async function POST(req: Request) {
     chatPrompt: String(body.chatPrompt ?? DEFAULT_CONFIG.chatPrompt),
     builderPrompt: String(body.builderPrompt ?? DEFAULT_CONFIG.builderPrompt),
     demoPrompt: String(body.demoPrompt ?? DEFAULT_CONFIG.demoPrompt),
+    showXray: !!body.showXray,
   };
   try {
     await setConfig(cfg);

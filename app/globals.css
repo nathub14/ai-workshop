@@ -184,14 +184,6 @@ h1, h2, h3 { font-family: "Space Grotesk", "Inter", sans-serif; margin: 0; lette
   .framework { grid-template-columns: repeat(2, 1fr); }
 }
 
-/* Build starters */
-.empty .starters-title { margin: 28px 0 0; font-size: 15px; }
-.starters { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 8px; margin-top: 10px; text-align: left; }
-.starter { display: flex; flex-direction: column; gap: 2px; padding: 12px 14px; background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); text-align: left; transition: border-color 120ms, transform 120ms, box-shadow 120ms; }
-.starter:hover:not(:disabled) { border-color: var(--accent); transform: translateY(-1px); box-shadow: 0 4px 14px rgba(0,0,0,0.06); }
-.starter b { font-size: 14px; }
-.starter span { font-size: 12px; color: var(--muted); }
-
 /* Responses panel */
 .stage[hidden] { display: none; }
 .responses { flex: 1; min-height: 0; overflow: auto; padding: 20px; background: var(--bg); display: flex; flex-direction: column; gap: 14px; }
@@ -241,3 +233,27 @@ h1, h2, h3 { font-family: "Space Grotesk", "Inter", sans-serif; margin: 0; lette
 .chips { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; }
 .chip { background: var(--panel); border: 1px solid var(--line); border-radius: 999px; padding: 8px 14px; font-size: 16px; font-weight: 500; text-align: left; }
 .chip:hover { border-color: var(--accent); background: var(--accent-soft); }
+
+/* My prompts */
+.my-prompts-btn { margin-left: auto; }
+.chips .my-prompts-btn { font-size: 16px; padding: 8px 14px; border-radius: 999px; }
+.prompts-card { background: var(--panel); border-radius: 16px; padding: 22px; width: min(620px, 100%); max-height: 88vh; display: flex; flex-direction: column; gap: 12px; font-size: 16px; }
+.prompts-card > p { margin: 0; font-size: 14px; }
+.prompts-head { display: flex; justify-content: space-between; align-items: center; }
+.prompts-head h3 { font-size: 22px; }
+.prompts-list { overflow-y: auto; display: flex; flex-direction: column; gap: 10px; min-height: 0; }
+.prompt-item { border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; display: flex; flex-direction: column; gap: 6px; }
+.prompt-item p { margin: 0; white-space: pre-wrap; color: var(--ink-2); font-size: 15px; }
+.prompt-item.editing { border-color: var(--accent); }
+.prompt-item input, .prompt-item textarea { font: inherit; padding: 9px 11px; border: 1px solid var(--line); border-radius: var(--radius); }
+.prompt-item textarea { resize: vertical; line-height: 1.45; }
+.prompt-item .row { flex-wrap: wrap; }
+
+/* Admin toggle */
+.toggle-row { display: flex; gap: 12px; align-items: flex-start; background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; cursor: pointer; }
+.toggle-row input { width: 20px; height: 20px; margin-top: 2px; accent-color: var(--accent); }
+.toggle-row > span { display: flex; flex-direction: column; gap: 4px; }
+
+/* One tool per chat */
+.mode.locked { display: inline-block; cursor: default; }
+.chat-item em { flex: none; font-style: normal; font-size: 11px; font-weight: 600; color: #8b909b; border: 1px solid var(--side-2); border-radius: 5px; padding: 1px 5px; margin-left: auto; }

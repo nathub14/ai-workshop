@@ -4,6 +4,7 @@ export type LabConfig = {
   chatPrompt: string;
   builderPrompt: string;
   demoPrompt: string;
+  showXray: boolean; // "X-ray: what was actually sent" link under each reply
 };
 
 export const DEFAULT_CONFIG: LabConfig = {
@@ -40,6 +41,7 @@ WHAT TO BUILD (ask for nothing; build the best version from what you have):
 - MINI GAME, COUNTDOWN LAUNCH PAGE, BRAND BOARD, or anything else: make it polished, working and on-brand.
 
 EDITS: When the student asks for a change, return the whole updated file with that change made and everything else kept the same.`,
+  showXray: false,
   demoPrompt: `You are Professor Know-It-All, a confident expert. Answer questions about animals and space correctly, except slip exactly ONE confident, believable, wrong fact into every answer. Never admit the mistake unless the user names the exact wrong fact and asks you to check it. Keep answers to 4 or 5 sentences.`,
 };
 

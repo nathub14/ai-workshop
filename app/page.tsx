@@ -5,6 +5,7 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import QRCode from "qrcode";
 import { withRuntime } from "@/lib/runtime";
+import MyPrompts, { withSaved } from "./MyPrompts";
 
 type Mode = "chat" | "search" | "image" | "build";
 type Source = { title: string; url: string };
@@ -18,7 +19,7 @@ type Msg = {
   mode?: Mode;
   xray?: unknown;
 };
-type Chat = { id: string; title: string; messages: Msg[]; createdAt: number };
+type Chat = { id: string; title: string; messages: Msg[]; createdAt: number; mode?: Mode }; // one tool per chat
 
 const CHATS_KEY = "lab_chats_v1";
 const CODE_KEY = "lab_code_v1";
@@ -28,20 +29,6 @@ const MODES: { id: Mode; label: string; hint: string; placeholder: string }[] = 
   { id: "search", label: "Web search", hint: "Answers with sources you can check", placeholder: "What should it look up? e.g. Find 2 stats showing dogs hurt their paws on hot footpaths, with links." },
   { id: "image", label: "Image", hint: "Make or edit pictures", placeholder: "Describe the picture: subject, style, background, lighting, angle…" },
   { id: "build", label: "Build", hint: "Websites, surveys, slide decks", placeholder: "Describe what to build (website, survey or slides) and give it your facts, prices and pictures…" },
-];
-
-// One-click starters for Build mode. Students swap the [brackets] for their own details.
-const STARTERS: { title: string; blurb: string; prompt: string }[] = [
-  { title: "Landing page", blurb: "A full startup website", prompt: "Build a landing page for my product [name]. It is [what it does] for [who it's for]. The price is [price]. Use my picture." },
-  { title: "Survey", blurb: "Ask people, see live results", prompt: "Build a survey for [my product] to find out if people want it. Ask: 1) [question] 2) [question] 3) [question]. Show live results." },
-  { title: "Pitch deck", blurb: "Slides for your big pitch", prompt: "Build a pitch deck for [my product]. Problem: [problem]. Solution: [solution]. Price: [price]. Evidence: [my survey results]." },
-  { title: "Quiz", blurb: "With a live leaderboard", prompt: "Build a 5-question quiz about [topic] with a live leaderboard. Questions and answers: [list them]." },
-  { title: "Live poll", blurb: "Everyone votes, bars move", prompt: "Build a live poll: \"[question]?\" with options [A], [B], [C]. Show the results updating live." },
-  { title: "Waitlist", blurb: "Count your first fans", prompt: "Build a waitlist page for [my product] with a big live counter of how many people have joined." },
-  { title: "Order form", blurb: "Menu, prices, running total", prompt: "Build an order page for [my business]. Items and prices: [item - price], [item - price]. Show a running total and save orders." },
-  { title: "Launch countdown", blurb: "Ticking clock to launch day", prompt: "Build a launch countdown page for [my product], launching on [date]. Add a 'notify me' sign-up." },
-  { title: "Mini game", blurb: "A playable game", prompt: "Build a simple game where [how it works], themed around [my product]. Keep score and add a live high-score board." },
-  { title: "Brand board", blurb: "Logo, colours, fonts", prompt: "Build a brand board for [my company]: wordmark logo, colour palette, fonts, tagline ideas and example social posts. Our vibe is [3 words]." },
 ];
 
 type Answer = { id: string; form: string; data: Record<string, string>; source: string; at: number };
@@ -197,7 +184,6 @@ export default function Lab() {
   const [pending, setPending] = useState<string[]>([]);
   const [uploading, setUploading] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [mode, setMode] = useState<Mode>("chat");
   const [demo, setDemo] = useState(false);
   const [sidebar, setSidebar] = useState(true);
   const [previewOpen, setPreviewOpen] = useState(true);
@@ -212,6 +198,7 @@ export default function Lab() {
   const [panel, setPanel] = useState<"page" | "responses">("page");
   const bottomRef = useRef<HTMLDivElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
   const stageRef = useRef<HTMLDivElement>(null);
   const [stage, setStage] = useState({ w: 800, h: 600 });
 
@@ -239,6 +226,9 @@ export default function Lab() {
 
   const chat = chats.find((c) => c.id === currentId);
   const messages = chat?.messages ?? [];
+  // Each chat sticks to one tool, picked while it's empty (older chats: the last tool they used).
+  const mode: Mode = chat?.mode ?? [...messages].reverse().find((m) => m.mode)?.mode ?? "chat";
+  const toolLocked = messages.length > 0;
   const htmlVersions = useMemo(() => messages.map((m, i) => ({ m, i })).filter((x) => x.m.html), [messages]);
   const shownIdx = previewIdx ?? (htmlVersions.length ? htmlVersions[htmlVersions.length - 1].i : null);
   const shownHtml = shownIdx != null ? messages[shownIdx]?.html ?? null : null;
@@ -325,7 +315,7 @@ export default function Lab() {
     const chatId = chat.id;
     const userMsg: Msg = { role: "user", text, images: pending.length ? pending : undefined, mode };
     const history = [...chat.messages, userMsg];
-    updateChat(chatId, (c) => ({ ...c, title: c.messages.length ? c.title : (text || "Picture").slice(0, 48), messages: history }));
+    updateChat(chatId, (c) => ({ ...c, mode, title: c.messages.length ? c.title : (text.split(/\n\s*\n/).pop() || "Picture").slice(0, 48), messages: history }));
     setInput("");
     setPending([]);
     setLoading(true);
@@ -427,6 +417,7 @@ export default function Lab() {
             {chats.map((c) => (
               <div key={c.id} className={`chat-item ${c.id === currentId ? "on" : ""}`} onClick={() => setCurrentId(c.id)}>
                 <span>{c.title}</span>
+                {c.mode && c.mode !== "chat" && <em className="chat-tool">{MODES.find((x) => x.id === c.mode)?.label}</em>}
                 <button className="x" title="Delete chat" onClick={(e) => { e.stopPropagation(); deleteChat(c.id); }}>×</button>
               </div>
             ))}
@@ -454,16 +445,7 @@ export default function Lab() {
                 <div><b>HOW</b><span>should it look or sound?</span></div>
                 <div><b>EXAMPLE</b><span>of what good looks like</span></div>
               </div>
-              <p className="muted">Pick a tool below. Attach pictures you've saved with the + button, or paste them in.</p>
-              <h3 className="starters-title">Or start a build in one click</h3>
-              <div className="starters">
-                {STARTERS.map((st) => (
-                  <button key={st.title} className="starter" disabled={demo} onClick={() => { setMode("build"); setInput(st.prompt); }}>
-                    <b>{st.title}</b>
-                    <span>{st.blurb}</span>
-                  </button>
-                ))}
-              </div>
+              <p className="muted">Pick this chat's tool below: each chat does one thing. Attach pictures you've saved with the + button, or paste them in. Save prompts you use a lot (like who you are) in My prompts.</p>
             </div>
           )}
           {messages.map((m, i) => (
@@ -531,20 +513,30 @@ export default function Lab() {
 
         <div className="composer">
           <div className="modes" role="tablist">
-            {MODES.map((m) => (
-              <button
-                key={m.id}
-                role="tab"
-                aria-selected={mode === m.id}
-                className={`mode ${mode === m.id ? "on" : ""}`}
-                disabled={demo && m.id !== "chat"}
-                onClick={() => setMode(m.id)}
-                title={m.hint}
-              >
-                {m.label}
-              </button>
-            ))}
-            <span className="mode-hint">{currentMode.hint}</span>
+            {toolLocked ? (
+              <>
+                <span className="mode on locked">{currentMode.label}</span>
+                <span className="mode-hint">This chat only does {currentMode.label.toLowerCase()}. For another tool, start a new chat.</span>
+              </>
+            ) : (
+              <>
+                {MODES.map((m) => (
+                  <button
+                    key={m.id}
+                    role="tab"
+                    aria-selected={mode === m.id}
+                    className={`mode ${mode === m.id ? "on" : ""}`}
+                    disabled={demo && m.id !== "chat"}
+                    onClick={() => { if (chat) updateChat(chat.id, (c) => ({ ...c, mode: m.id })); inputRef.current?.focus(); }}
+                    title={m.hint}
+                  >
+                    {m.label}
+                  </button>
+                ))}
+                <span className="mode-hint">{currentMode.hint}</span>
+              </>
+            )}
+            <MyPrompts onUse={(t) => { setInput((cur) => withSaved(t, cur)); inputRef.current?.focus(); }} />
           </div>
           {(pending.length > 0 || uploading) && (
             <div className="pending">
@@ -568,6 +560,7 @@ export default function Lab() {
               onChange={(e) => e.target.files && uploadFiles(e.target.files)}
             />
             <textarea
+              ref={inputRef}
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onPaste={(e) => {

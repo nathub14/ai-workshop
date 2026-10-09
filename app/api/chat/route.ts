@@ -126,8 +126,8 @@ export async function POST(req: Request) {
 
   const model = mode === "build" && !demo ? BUILD_MODEL : CHAT_MODEL;
   // X-ray view for the lesson: what was really sent (pictures shortened)
-  // Exercise bots never send the X-ray back: it would show the hidden prompt.
-  const xray = bot ? undefined : {
+  // X-ray is switched on in /admin. Exercise bots never send it: it would show the hidden prompt.
+  const xray = bot || !cfg.showXray ? undefined : {
     model,
     instructions,
     tools,

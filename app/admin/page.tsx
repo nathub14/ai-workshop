@@ -2,13 +2,14 @@
 
 import { useState } from "react";
 
-type Cfg = { chatPrompt: string; builderPrompt: string; demoPrompt: string };
+type Cfg = { chatPrompt: string; builderPrompt: string; demoPrompt: string; showXray: boolean };
+type PromptKey = "chatPrompt" | "builderPrompt" | "demoPrompt";
 type Status = {
   storage: { ok: boolean; message: string };
   models: { chat: string; builder: string; key: boolean };
 };
 
-const FIELDS: { key: keyof Cfg; label: string; help: string; rows: number }[] = [
+const FIELDS: { key: PromptKey; label: string; help: string; rows: number }[] = [
   { key: "chatPrompt", label: "Front prompt", help: "Hidden instructions put in front of everything the students send.", rows: 8 },
   { key: "builderPrompt", label: "Build prompt", help: "Added in Build mode. Must tell the AI to reply with one HTML file in a code block. Technical rules (saving survey answers, safety) are added automatically after this.", rows: 22 },
   { key: "demoPrompt", label: "Professor Know-It-All", help: "Used only when the app is opened with ?demo=1 at the end of the link.", rows: 5 },
@@ -80,6 +81,13 @@ export default function Admin() {
         </div>
       )}
       <button className="btn small" style={{ alignSelf: "flex-start" }} onClick={() => login()}>Re-check status</button>
+      <label className="toggle-row">
+        <input type="checkbox" checked={!!cfg.showXray} onChange={(e) => setCfg({ ...cfg, showXray: e.target.checked })} />
+        <span>
+          <b>Show X-ray</b>
+          <span className="help">Adds an "X-ray: what was actually sent" link under each reply in the main chat, showing the hidden prompt and whole conversation. Never shown on the exercise bots. Press Save to apply.</span>
+        </span>
+      </label>
       {FIELDS.map((f) => (
         <div key={f.key} className="field">
           <div className="field-head">

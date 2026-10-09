@@ -5,6 +5,7 @@ import Link from "next/link";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import type { PublicBot } from "@/lib/exerciseBots";
+import MyPrompts, { withSaved } from "../MyPrompts";
 
 type Msg = { role: "user" | "assistant"; text: string; error?: boolean };
 
@@ -151,6 +152,7 @@ export default function ExerciseChat({ bot }: { bot: PublicBot }) {
                 {c}
               </button>
             ))}
+            <MyPrompts onUse={(t) => { setInput((cur) => withSaved(t, cur)); inputRef.current?.focus(); }} />
           </div>
           <div className="input-row">
             <textarea
