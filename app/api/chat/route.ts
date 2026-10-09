@@ -1,6 +1,7 @@
 import OpenAI from "openai";
 import { codeOk } from "@/lib/auth";
 import { getConfig } from "@/lib/config";
+import { EXERCISE_PREAMBLE, getBot } from "@/lib/exerciseBots";
 import { loadFile, newId, saveFile } from "@/lib/storage";
 
 export const maxDuration = 300;
@@ -56,8 +57,11 @@ export async function POST(req: Request) {
   if (!codeOk(body.code)) return Response.json({ error: "Wrong access code" }, { status: 401 });
 
   const origin = new URL(req.url).origin;
-  const mode: Mode = ["chat", "search", "image", "build"].includes(body.mode) ? body.mode : "chat";
-  const demo = !!body.demo;
+  // Exercise bots: plain chat with the bot's own hidden prompt (see lib/exerciseBots.ts)
+  const bot = body.bot ? getBot(body.bot) : undefined;
+  if (body.bot && !bot) return Response.json({ error: "Unknown bot" }, { status: 400 });
+  const mode: Mode = !bot && ["chat", "search", "image", "build"].includes(body.mode) ? body.mode : "chat";
+  const demo = !bot && !!body.demo;
   const messages: InMsg[] = Array.isArray(body.messages) ? body.messages.slice(-MAX_HISTORY) : [];
   if (!messages.length || messages[messages.length - 1].role !== "user") {
     return Response.json({ error: "No message" }, { status: 400 });
@@ -112,7 +116,8 @@ export async function POST(req: Request) {
 
   const cfg = await getConfig();
   let instructions = cfg.chatPrompt;
-  if (demo) instructions += `\n\n${cfg.demoPrompt}`;
+  if (bot) instructions = `${EXERCISE_PREAMBLE}\n\n${bot.systemPrompt}`;
+  else if (demo) instructions += `\n\n${cfg.demoPrompt}`;
   else if (mode === "build") instructions += `\n\n${cfg.builderPrompt}\n\n${BUILD_TECH}`;
 
   const tools: any[] = [];
@@ -121,7 +126,8 @@ export async function POST(req: Request) {
 
   const model = mode === "build" && !demo ? BUILD_MODEL : CHAT_MODEL;
   // X-ray view for the lesson: what was really sent (pictures shortened)
-  const xray = {
+  // Exercise bots never send the X-ray back: it would show the hidden prompt.
+  const xray = bot ? undefined : {
     model,
     instructions,
     tools,

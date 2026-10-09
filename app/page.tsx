@@ -422,6 +422,7 @@ export default function Lab() {
             <button className="icon-btn dark" title="Hide sidebar" onClick={() => setSidebar(false)}>«</button>
           </div>
           <button className="btn primary block" onClick={addChat}>New chat</button>
+          <a className="side-link" href="/exercises">Exercises: training bots</a>
           <div className="chat-list">
             {chats.map((c) => (
               <div key={c.id} className={`chat-item ${c.id === currentId ? "on" : ""}`} onClick={() => setCurrentId(c.id)}>
